@@ -1,0 +1,13 @@
+{
+  "name": "american-leverage-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "KPI dashboard for the Setter/Closer sales funnel, fed live from Airtable.",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
