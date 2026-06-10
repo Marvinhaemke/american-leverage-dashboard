@@ -3,6 +3,13 @@
 KPI dashboard for the Setter → Closer funnel, fed live from Airtable and
 deployable to Vercel.
 
+## Layout
+
+Header and filters ("general information") sit on top, followed by an overall
+overview strip (leads, calls booked, closes, closing rate, revenue). Below
+that, the **Setter** and **Closer** dashboards sit in two columns next to each
+other; they stack vertically on narrow screens.
+
 ## What's tracked
 
 ### Setter Dashboard

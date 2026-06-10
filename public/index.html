@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>American Leverage — Sales Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
@@ -19,6 +22,7 @@
     </div>
   </header>
 
+  <!-- ============= GENERAL INFORMATION ============= -->
   <section class="filters">
     <div class="filter">
       <label for="timeframe-basis">Timeframe basis</label>
@@ -58,113 +62,121 @@
     </div>
   </section>
 
-  <nav class="tabs">
-    <button class="tab active" data-tab="setter">Setter Dashboard</button>
-    <button class="tab" data-tab="closer">Closer Dashboard</button>
-  </nav>
-
-  <!-- ============= SETTER ============= -->
-  <main id="tab-setter" class="tab-panel active">
-    <section class="kpi-grid">
-      <div class="kpi"><span class="kpi-label">Booked Calls</span><span class="kpi-value" id="s-booked">—</span></div>
-      <div class="kpi"><span class="kpi-label">Completed Calls</span><span class="kpi-value" id="s-completed">—</span></div>
-      <div class="kpi"><span class="kpi-label">No Show Rate</span><span class="kpi-value" id="s-noshow">—</span></div>
-      <div class="kpi"><span class="kpi-label">Qualified Rate</span><span class="kpi-value" id="s-qualified">—</span><span class="kpi-sub">of completed setting calls</span></div>
-      <div class="kpi"><span class="kpi-label">Closing Rate</span><span class="kpi-value" id="s-closing-rate">—</span><span class="kpi-sub">closes / completed closing calls</span></div>
-      <div class="kpi"><span class="kpi-label">Closer Disqualification Rate</span><span class="kpi-value" id="s-closer-disq">—</span></div>
-      <div class="kpi"><span class="kpi-label">Closer No-Show Rate</span><span class="kpi-value" id="s-closer-noshow">—</span></div>
-      <div class="kpi"><span class="kpi-label">Revenue</span><span class="kpi-value" id="s-revenue">—</span><span class="kpi-sub">amount received</span></div>
-      <div class="kpi"><span class="kpi-label">No Outcome</span><span class="kpi-value" id="s-no-outcome">—</span><span class="kpi-sub">closing calls completed, outcome blank</span></div>
+  <div class="page">
+    <section class="overview" aria-label="Overview">
+      <div class="kpi overview-kpi"><span class="kpi-label">Leads</span><span class="kpi-value" id="o-leads">—</span><span class="kpi-sub">in selected range</span></div>
+      <div class="kpi overview-kpi"><span class="kpi-label">Setting Calls Booked</span><span class="kpi-value" id="o-setting-booked">—</span></div>
+      <div class="kpi overview-kpi"><span class="kpi-label">Closing Calls Booked</span><span class="kpi-value" id="o-closing-booked">—</span></div>
+      <div class="kpi overview-kpi"><span class="kpi-label">Closes</span><span class="kpi-value" id="o-closes">—</span></div>
+      <div class="kpi overview-kpi"><span class="kpi-label">Closing Rate</span><span class="kpi-value" id="o-closing-rate">—</span><span class="kpi-sub">closes / completed closing calls</span></div>
+      <div class="kpi overview-kpi"><span class="kpi-label">Revenue</span><span class="kpi-value" id="o-revenue">—</span><span class="kpi-sub">amount received</span></div>
     </section>
 
-    <section class="chart-row">
-      <div class="chart-card">
-        <h3>Funnel</h3>
-        <canvas id="setter-funnel"></canvas>
-      </div>
-      <div class="chart-card">
-        <h3>Booked vs Completed Setting Calls — by setter</h3>
-        <canvas id="setter-by-person"></canvas>
-      </div>
-    </section>
+    <main class="columns">
+      <!-- ============= SETTER COLUMN ============= -->
+      <section class="column column-setter" aria-label="Setter dashboard">
+        <h2 class="column-title"><span class="dot dot-setter"></span>Setter Dashboard</h2>
 
-    <section class="table-card">
-      <h3>Per-setter breakdown</h3>
-      <div class="table-wrap">
-        <table id="setter-table">
-          <thead>
-            <tr>
-              <th>Setter</th>
-              <th>Booked</th>
-              <th>Completed</th>
-              <th>No Show %</th>
-              <th>Qualified %</th>
-              <th>Closes</th>
-              <th>Closing Rate %</th>
-              <th>Closer Disq %</th>
-              <th>Closer No-Show %</th>
-              <th>Revenue</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
+        <div class="kpi-grid">
+          <div class="kpi"><span class="kpi-label">Booked Calls</span><span class="kpi-value" id="s-booked">—</span></div>
+          <div class="kpi"><span class="kpi-label">Completed Calls</span><span class="kpi-value" id="s-completed">—</span></div>
+          <div class="kpi"><span class="kpi-label">No Show Rate</span><span class="kpi-value" id="s-noshow">—</span></div>
+          <div class="kpi"><span class="kpi-label">Qualified Rate</span><span class="kpi-value" id="s-qualified">—</span><span class="kpi-sub">of completed setting calls</span></div>
+          <div class="kpi"><span class="kpi-label">Closing Rate</span><span class="kpi-value" id="s-closing-rate">—</span><span class="kpi-sub">closes / completed closing calls</span></div>
+          <div class="kpi"><span class="kpi-label">Closer Disqualification Rate</span><span class="kpi-value" id="s-closer-disq">—</span></div>
+          <div class="kpi"><span class="kpi-label">Closer No-Show Rate</span><span class="kpi-value" id="s-closer-noshow">—</span></div>
+          <div class="kpi"><span class="kpi-label">Revenue</span><span class="kpi-value" id="s-revenue">—</span><span class="kpi-sub">amount received</span></div>
+          <div class="kpi"><span class="kpi-label">No Outcome</span><span class="kpi-value" id="s-no-outcome">—</span><span class="kpi-sub">closing calls completed, outcome blank</span></div>
+        </div>
 
-  <!-- ============= CLOSER ============= -->
-  <main id="tab-closer" class="tab-panel">
-    <section class="kpi-grid">
-      <div class="kpi"><span class="kpi-label">Booked Calls</span><span class="kpi-value" id="c-booked">—</span></div>
-      <div class="kpi"><span class="kpi-label">Completed Calls</span><span class="kpi-value" id="c-completed">—</span></div>
-      <div class="kpi"><span class="kpi-label">No Show Rate</span><span class="kpi-value" id="c-noshow">—</span></div>
-      <div class="kpi"><span class="kpi-label">Assessment Filled</span><span class="kpi-value" id="c-assessment">—</span><span class="kpi-sub">of booked closing calls</span></div>
-      <div class="kpi"><span class="kpi-label">Cancelled — no assessment</span><span class="kpi-value" id="c-cancelled-noassess">—</span></div>
-      <div class="kpi"><span class="kpi-label">Closes</span><span class="kpi-value" id="c-closes">—</span></div>
-      <div class="kpi"><span class="kpi-label">No Close</span><span class="kpi-value" id="c-noclose">—</span></div>
-      <div class="kpi"><span class="kpi-label">Disqualified from Closer</span><span class="kpi-value" id="c-disq">—</span></div>
-      <div class="kpi"><span class="kpi-label">In Follow Up</span><span class="kpi-value" id="c-followup">—</span></div>
-      <div class="kpi"><span class="kpi-label">Close after Follow Up</span><span class="kpi-value" id="c-close-after-fu">—</span></div>
-      <div class="kpi"><span class="kpi-label">No Close after Follow Up</span><span class="kpi-value" id="c-noclose-after-fu">—</span></div>
-      <div class="kpi"><span class="kpi-label">Closing Rate</span><span class="kpi-value" id="c-closing-rate">—</span></div>
-      <div class="kpi"><span class="kpi-label">Close Rate after Follow Up</span><span class="kpi-value" id="c-close-rate-fu">—</span></div>
-      <div class="kpi"><span class="kpi-label">Revenue</span><span class="kpi-value" id="c-revenue">—</span><span class="kpi-sub">amount received</span></div>
-    </section>
+        <div class="chart-card">
+          <h3>Funnel</h3>
+          <div class="chart-body"><canvas id="setter-funnel"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Booked vs Completed Setting Calls — by setter</h3>
+          <div class="chart-body"><canvas id="setter-by-person"></canvas></div>
+        </div>
 
-    <section class="chart-row">
-      <div class="chart-card">
-        <h3>Closing call outcomes</h3>
-        <canvas id="closer-outcomes"></canvas>
-      </div>
-      <div class="chart-card">
-        <h3>Closes vs revenue — by closer</h3>
-        <canvas id="closer-by-person"></canvas>
-      </div>
-    </section>
+        <div class="table-card">
+          <h3>Per-setter breakdown</h3>
+          <div class="table-wrap">
+            <table id="setter-table">
+              <thead>
+                <tr>
+                  <th>Setter</th>
+                  <th class="num">Booked</th>
+                  <th class="num">Completed</th>
+                  <th class="num">No Show %</th>
+                  <th class="num">Qualified %</th>
+                  <th class="num">Closes</th>
+                  <th class="num">Closing Rate %</th>
+                  <th class="num">Closer Disq %</th>
+                  <th class="num">Closer No-Show %</th>
+                  <th class="num">Revenue</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
-    <section class="table-card">
-      <h3>Per-closer breakdown</h3>
-      <div class="table-wrap">
-        <table id="closer-table">
-          <thead>
-            <tr>
-              <th>Closer</th>
-              <th>Booked</th>
-              <th>Completed</th>
-              <th>No Show %</th>
-              <th>Assessments</th>
-              <th>Closes</th>
-              <th>No Close</th>
-              <th>Follow Up</th>
-              <th>Closing Rate %</th>
-              <th>Revenue</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
+      <!-- ============= CLOSER COLUMN ============= -->
+      <section class="column column-closer" aria-label="Closer dashboard">
+        <h2 class="column-title"><span class="dot dot-closer"></span>Closer Dashboard</h2>
+
+        <div class="kpi-grid">
+          <div class="kpi"><span class="kpi-label">Booked Calls</span><span class="kpi-value" id="c-booked">—</span></div>
+          <div class="kpi"><span class="kpi-label">Completed Calls</span><span class="kpi-value" id="c-completed">—</span></div>
+          <div class="kpi"><span class="kpi-label">No Show Rate</span><span class="kpi-value" id="c-noshow">—</span></div>
+          <div class="kpi"><span class="kpi-label">Assessment Filled</span><span class="kpi-value" id="c-assessment">—</span><span class="kpi-sub">of booked closing calls</span></div>
+          <div class="kpi"><span class="kpi-label">Cancelled — no assessment</span><span class="kpi-value" id="c-cancelled-noassess">—</span></div>
+          <div class="kpi"><span class="kpi-label">Closes</span><span class="kpi-value" id="c-closes">—</span></div>
+          <div class="kpi"><span class="kpi-label">No Close</span><span class="kpi-value" id="c-noclose">—</span></div>
+          <div class="kpi"><span class="kpi-label">Disqualified from Closer</span><span class="kpi-value" id="c-disq">—</span></div>
+          <div class="kpi"><span class="kpi-label">In Follow Up</span><span class="kpi-value" id="c-followup">—</span><span class="kpi-sub">not yet resolved</span></div>
+          <div class="kpi"><span class="kpi-label">Close after Follow Up</span><span class="kpi-value" id="c-close-after-fu">—</span></div>
+          <div class="kpi"><span class="kpi-label">No Close after Follow Up</span><span class="kpi-value" id="c-noclose-after-fu">—</span></div>
+          <div class="kpi"><span class="kpi-label">Closing Rate</span><span class="kpi-value" id="c-closing-rate">—</span></div>
+          <div class="kpi"><span class="kpi-label">Close Rate after Follow Up</span><span class="kpi-value" id="c-close-rate-fu">—</span></div>
+          <div class="kpi"><span class="kpi-label">Revenue</span><span class="kpi-value" id="c-revenue">—</span><span class="kpi-sub">amount received</span></div>
+        </div>
+
+        <div class="chart-card">
+          <h3>Closing call outcomes</h3>
+          <div class="chart-body"><canvas id="closer-outcomes"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Closes vs revenue — by closer</h3>
+          <div class="chart-body"><canvas id="closer-by-person"></canvas></div>
+        </div>
+
+        <div class="table-card">
+          <h3>Per-closer breakdown</h3>
+          <div class="table-wrap">
+            <table id="closer-table">
+              <thead>
+                <tr>
+                  <th>Closer</th>
+                  <th class="num">Booked</th>
+                  <th class="num">Completed</th>
+                  <th class="num">No Show %</th>
+                  <th class="num">Assessments</th>
+                  <th class="num">Closes</th>
+                  <th class="num">No Close</th>
+                  <th class="num">Follow Up</th>
+                  <th class="num">Closing Rate %</th>
+                  <th class="num">Revenue</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <footer class="footer">
     <span id="footer-info"></span>

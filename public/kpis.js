@@ -160,7 +160,13 @@ export function closerKPIs(records) {
 
   const closes   = complete.filter(r => bucketOutcome(r) === "close");
   const noCloses = complete.filter(r => bucketOutcome(r) === "no_close");
-  const followUp = complete.filter(r => bucketOutcome(r) === "follow_up" || isFollowUpFlag(r));
+  // "In Follow Up" = still unresolved. Once the outcome is overwritten to
+  // Close / No Close the record moves to the "after Follow Up" buckets below,
+  // so it must not also be counted here (it would double-count in the donut).
+  const followUp = complete.filter(r => {
+    const b = bucketOutcome(r);
+    return b === "follow_up" || (isFollowUpFlag(r) && b !== "close" && b !== "no_close");
+  });
 
   // After follow-up resolution: Follow Up Process flag stays true even when
   // the outcome has since been overwritten to Close / No Close.
