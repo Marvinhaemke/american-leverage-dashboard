@@ -66,6 +66,7 @@ html, body {
   font-size: 12px;
   color: var(--muted);
 }
+#status-text.warn-text { color: var(--warn); }
 button {
   background: var(--accent);
   color: white;
@@ -142,25 +143,52 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 .overview-kpi .kpi-value { font-size: 26px; }
 
-/* ---------- Setter / Closer sections ---------- */
-.section {
+/* ---------- Tabs ---------- */
+.tabs {
   display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.tab:hover { filter: none; color: var(--text); border-color: #38445a; }
+.tab[data-tab="setter"].active {
+  background: rgba(79, 140, 255, 0.14);
+  border-color: var(--accent);
+  color: var(--text);
+}
+.tab[data-tab="closer"].active {
+  background: rgba(157, 123, 255, 0.14);
+  border-color: var(--accent-2);
+  color: var(--text);
+}
+
+/* ---------- Setter / Closer tab panels ---------- */
+.tab-panel {
+  display: none;
   flex-direction: column;
   gap: 16px;
   margin-bottom: 36px;
 }
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.tab-panel.active { display: flex; }
+.basis-note {
   margin: 0;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-  font-size: 15px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+  font-size: 12px;
+  color: var(--muted);
 }
+.basis-note b { color: var(--text); font-weight: 600; }
 .subsection-title {
   margin: 6px 0 -4px;
   font-size: 12px;

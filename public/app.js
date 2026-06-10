@@ -9,11 +9,16 @@ import {
 const state = {
   records: [],
   fetchedAt: null,
+  missingFields: [],
   charts: {}
 };
 
 const $ = id => document.getElementById(id);
 const REFRESH_MS = 5 * 60 * 1000; // 5 minutes
+
+// Each dashboard applies the date range to its own date field.
+const SETTER_BASIS = "Date Setting Call";
+const CLOSER_BASIS = "Date Strategy Call"; // = closing call
 
 const COLORS = {
   text: "#e9edf4",
@@ -35,11 +40,17 @@ async function loadRecords() {
     if (!res.ok) throw new Error((await res.text()).slice(0, 200));
     const data = await res.json();
     state.records = data.records || [];
+    state.missingFields = data.missingFields || [];
     state.fetchedAt = new Date(data.fetchedAt || Date.now());
     populatePeopleFilters();
     render();
     const ts = state.fetchedAt.toLocaleString();
-    $("status-text").textContent = `${state.records.length} leads — updated ${ts}`;
+    let status = `${state.records.length} leads — updated ${ts}`;
+    if (state.missingFields.length) {
+      status += ` — ⚠ not found in Airtable: ${state.missingFields.join(", ")}`;
+    }
+    $("status-text").textContent = status;
+    $("status-text").classList.toggle("warn-text", state.missingFields.length > 0);
     $("footer-info").textContent =
       `Data source: Airtable Leads table. Auto-refreshes every 5 minutes.`;
   } catch (err) {
@@ -74,7 +85,6 @@ function escapeHtml(s) {
 }
 
 function readFilters() {
-  const basis = $("timeframe-basis").value;
   const preset = $("date-preset").value;
   let from = null, to = null;
 
@@ -106,7 +116,6 @@ function readFilters() {
   }
 
   return {
-    basis,
     from,
     to,
     setter: $("setter-filter").value || null,
@@ -124,22 +133,26 @@ function toInputDate(d) {
 // ---------- Render ----------
 function render() {
   const filters = readFilters();
-  const filtered = filterRecords(state.records, filters);
 
-  renderOverview(filtered);
-  renderSetter(filtered);
-  renderCloser(filtered);
+  renderOverview(filters);
+  renderSetter(filterRecords(state.records, { ...filters, basis: SETTER_BASIS }));
+  renderCloser(filterRecords(state.records, { ...filters, basis: CLOSER_BASIS }));
 }
 
-function renderOverview(records) {
-  const s = setterKPIs(records);
-  const c = closerKPIs(records);
-  $("o-leads").textContent          = fmt.num(records.length);
-  $("o-setting-booked").textContent = fmt.num(s.bookedCalls);
+// Each overview metric uses its natural date basis (see kpi-sub labels).
+function renderOverview(filters) {
+  const byCreated = filterRecords(state.records, { ...filters, basis: "Date Created" });
+  const bySetting = filterRecords(state.records, { ...filters, basis: SETTER_BASIS });
+  const byClosing = filterRecords(state.records, { ...filters, basis: CLOSER_BASIS });
+  const byClose   = filterRecords(state.records, { ...filters, basis: "Date Close" });
+
+  const c = closerKPIs(byClosing);
+  $("o-leads").textContent          = fmt.num(byCreated.length);
+  $("o-setting-booked").textContent = fmt.num(setterKPIs(bySetting).bookedCalls);
   $("o-closing-booked").textContent = fmt.num(c.bookedCalls);
   $("o-closes").textContent         = fmt.num(c.closes);
   $("o-closing-rate").textContent   = fmt.pct(c.closingRate);
-  $("o-revenue").textContent        = fmt.money(c.revenue);
+  $("o-revenue").textContent        = fmt.money(closerKPIs(byClose).revenue);
 }
 
 function renderSetter(records) {
@@ -392,7 +405,7 @@ function drawComboChart(canvasId, labels, closes, revenue) {
 function bindEvents() {
   $("refresh-btn").addEventListener("click", loadRecords);
 
-  for (const id of ["timeframe-basis", "date-preset", "setter-filter", "closer-filter"]) {
+  for (const id of ["date-preset", "setter-filter", "closer-filter"]) {
     $(id).addEventListener("change", render);
   }
   for (const id of ["date-from", "date-to"]) {
@@ -401,6 +414,21 @@ function bindEvents() {
       render();
     });
   }
+
+  document.querySelectorAll(".tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(b => {
+        b.classList.remove("active");
+        b.setAttribute("aria-selected", "false");
+      });
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      btn.setAttribute("aria-selected", "true");
+      $("tab-" + btn.dataset.tab).classList.add("active");
+      // Re-render so charts are drawn into the now-visible (non-zero-size) panel.
+      render();
+    });
+  });
 }
 
 bindEvents();
