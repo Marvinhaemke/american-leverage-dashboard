@@ -55,10 +55,19 @@ function inRange(date, from, to) {
 }
 
 // ---------- Booleans ----------
+// A call has "occurred" once its scheduled date is on or before today. Calls
+// dated in the future are still on the calendar but haven't happened yet, so
+// they count as Booked but NOT as Completed (and aren't no-shows yet either).
+function hasOccurred(dateStr) {
+  const d = parseDate(dateStr);
+  if (!d) return false;
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  return d <= today;
+}
+
 function isNoShowSetting(r)    { return r["Setting No-Show"] === true; }
 function isNoShowClosing(r)    { return r["Strategy No-Show"] === true; }
-// "Completed" = booked AND not no-show; the schema no longer has a "Showed" value.
-function isShowedClosing(r)    { return !!r["Date Strategy Call"] && !isNoShowClosing(r); }
 function isAssessmentFilled(r) { return r["Assessment Filled"] === true; }
 function isFollowUpFlag(r)     { return r["Follow Up Process"] === true; }
 
@@ -107,14 +116,18 @@ function sum(records, field) {
 // ---------- Setter KPIs ----------
 export function setterKPIs(records) {
   const settingBooked   = records.filter(r => r["Date Setting Call"]);
-  const settingComplete = settingBooked.filter(r => !isNoShowSetting(r));
-  const settingNoShow   = settingBooked.filter(isNoShowSetting);
+  // "Due" = call date has passed; future-dated bookings are excluded from
+  // completed / no-show so pending calls don't distort either metric.
+  const settingDue      = settingBooked.filter(r => hasOccurred(r["Date Setting Call"]));
+  const settingComplete = settingDue.filter(r => !isNoShowSetting(r));
+  const settingNoShow   = settingDue.filter(isNoShowSetting);
   const qualified       = settingComplete.filter(isQualifiedSetting);
 
   // Downstream closing-call view limited to records this setter sent forward.
   const closingBooked   = records.filter(r => r["Date Strategy Call"]);
-  const closingComplete = closingBooked.filter(isShowedClosing);
-  const closingNoShow   = closingBooked.filter(isNoShowClosing);
+  const closingDue      = closingBooked.filter(r => hasOccurred(r["Date Strategy Call"]));
+  const closingComplete = closingDue.filter(r => !isNoShowClosing(r));
+  const closingNoShow   = closingDue.filter(isNoShowClosing);
   const closerDisq      = closingComplete.filter(isDisqualifiedByCloser);
   const closes          = closingComplete.filter(r => bucketOutcome(r) === "close");
 
@@ -123,11 +136,11 @@ export function setterKPIs(records) {
   return {
     bookedCalls: settingBooked.length,
     completedCalls: settingComplete.length,
-    noShowRate: pct(settingNoShow.length, settingBooked.length),
+    noShowRate: pct(settingNoShow.length, settingDue.length),
     qualifiedRate: pct(qualified.length, settingComplete.length),
     closingRate: pct(closes.length, closingComplete.length),
     closerDisqualRate: pct(closerDisq.length, closingComplete.length),
-    closerNoShowRate: pct(closingNoShow.length, closingBooked.length),
+    closerNoShowRate: pct(closingNoShow.length, closingDue.length),
     revenue: sum(records, "Amount received"),
     noOutcome: noOutcome.length,
     closes: closes.length,
@@ -139,10 +152,12 @@ export function setterKPIs(records) {
 // ---------- Closer KPIs ----------
 export function closerKPIs(records) {
   const booked   = records.filter(r => r["Date Strategy Call"]);
-  const complete = booked.filter(isShowedClosing);
-  const noShow   = booked.filter(isNoShowClosing);
+  // "Due" = closing call date has passed; future bookings are excluded from
+  // completed / no-show.
+  const due      = booked.filter(r => hasOccurred(r["Date Strategy Call"]));
+  const complete = due.filter(r => !isNoShowClosing(r));
+  const noShow   = due.filter(isNoShowClosing);
 
-  const buckets = complete.map(bucketOutcome);
   const closes   = complete.filter(r => bucketOutcome(r) === "close");
   const noCloses = complete.filter(r => bucketOutcome(r) === "no_close");
   const followUp = complete.filter(r => bucketOutcome(r) === "follow_up" || isFollowUpFlag(r));
@@ -163,7 +178,7 @@ export function closerKPIs(records) {
   return {
     bookedCalls: booked.length,
     completedCalls: complete.length,
-    noShowRate: pct(noShow.length, booked.length),
+    noShowRate: pct(noShow.length, due.length),
     assessmentFilled: assessment.length,
     assessmentRate: pct(assessment.length, booked.length),
     cancelledNoAssessment: cancelledNoAssess.length,

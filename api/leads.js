@@ -59,15 +59,18 @@ export default async function handler(req, res) {
   const tableId = process.env.AIRTABLE_TABLE || "tbloGJE9Oz52hrMTl";
 
   if (!token) {
+    res.setHeader("Cache-Control", "no-store");
     res.status(500).json({ error: "AIRTABLE_TOKEN not set" });
     return;
   }
 
   try {
     const records = await fetchAll(baseId, tableId, token);
+    // Only successful responses are cacheable; errors must never be cached.
     res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=300");
     res.status(200).json({ records, fetchedAt: new Date().toISOString() });
   } catch (err) {
+    res.setHeader("Cache-Control", "no-store");
     res.status(502).json({ error: String(err.message || err) });
   }
 }
