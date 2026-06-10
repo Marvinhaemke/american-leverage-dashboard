@@ -72,11 +72,15 @@
       <div class="kpi overview-kpi"><span class="kpi-label">Revenue</span><span class="kpi-value" id="o-revenue">—</span><span class="kpi-sub">amount received</span></div>
     </section>
 
-    <main class="columns">
-      <!-- ============= SETTER COLUMN ============= -->
-      <section class="column column-setter" aria-label="Setter dashboard">
-        <h2 class="column-title"><span class="dot dot-setter"></span>Setter Dashboard</h2>
+    <main>
+      <!-- ============= SETTERS ============= -->
+      <section class="section section-setter" aria-label="Setter dashboard">
+        <h2 class="section-title"><span class="dot dot-setter"></span>Setter Dashboard</h2>
 
+        <h3 class="subsection-title">Individual setters</h3>
+        <div class="people-grid" id="setter-people"></div>
+
+        <h3 class="subsection-title">Team totals</h3>
         <div class="kpi-grid">
           <div class="kpi"><span class="kpi-label">Booked Calls</span><span class="kpi-value" id="s-booked">—</span></div>
           <div class="kpi"><span class="kpi-label">Completed Calls</span><span class="kpi-value" id="s-completed">—</span></div>
@@ -89,43 +93,26 @@
           <div class="kpi"><span class="kpi-label">No Outcome</span><span class="kpi-value" id="s-no-outcome">—</span><span class="kpi-sub">closing calls completed, outcome blank</span></div>
         </div>
 
-        <div class="chart-card">
-          <h3>Funnel</h3>
-          <div class="chart-body"><canvas id="setter-funnel"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <h3>Booked vs Completed Setting Calls — by setter</h3>
-          <div class="chart-body"><canvas id="setter-by-person"></canvas></div>
-        </div>
-
-        <div class="table-card">
-          <h3>Per-setter breakdown</h3>
-          <div class="table-wrap">
-            <table id="setter-table">
-              <thead>
-                <tr>
-                  <th>Setter</th>
-                  <th class="num">Booked</th>
-                  <th class="num">Completed</th>
-                  <th class="num">No Show %</th>
-                  <th class="num">Qualified %</th>
-                  <th class="num">Closes</th>
-                  <th class="num">Closing Rate %</th>
-                  <th class="num">Closer Disq %</th>
-                  <th class="num">Closer No-Show %</th>
-                  <th class="num">Revenue</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+        <div class="chart-row">
+          <div class="chart-card">
+            <h3>Funnel</h3>
+            <div class="chart-body"><canvas id="setter-funnel"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Booked vs Completed Setting Calls — by setter</h3>
+            <div class="chart-body"><canvas id="setter-by-person"></canvas></div>
           </div>
         </div>
       </section>
 
-      <!-- ============= CLOSER COLUMN ============= -->
-      <section class="column column-closer" aria-label="Closer dashboard">
-        <h2 class="column-title"><span class="dot dot-closer"></span>Closer Dashboard</h2>
+      <!-- ============= CLOSERS ============= -->
+      <section class="section section-closer" aria-label="Closer dashboard">
+        <h2 class="section-title"><span class="dot dot-closer"></span>Closer Dashboard</h2>
 
+        <h3 class="subsection-title">Individual closers</h3>
+        <div class="people-grid" id="closer-people"></div>
+
+        <h3 class="subsection-title">Team totals</h3>
         <div class="kpi-grid">
           <div class="kpi"><span class="kpi-label">Booked Calls</span><span class="kpi-value" id="c-booked">—</span></div>
           <div class="kpi"><span class="kpi-label">Completed Calls</span><span class="kpi-value" id="c-completed">—</span></div>
@@ -143,35 +130,14 @@
           <div class="kpi"><span class="kpi-label">Revenue</span><span class="kpi-value" id="c-revenue">—</span><span class="kpi-sub">amount received</span></div>
         </div>
 
-        <div class="chart-card">
-          <h3>Closing call outcomes</h3>
-          <div class="chart-body"><canvas id="closer-outcomes"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <h3>Closes vs revenue — by closer</h3>
-          <div class="chart-body"><canvas id="closer-by-person"></canvas></div>
-        </div>
-
-        <div class="table-card">
-          <h3>Per-closer breakdown</h3>
-          <div class="table-wrap">
-            <table id="closer-table">
-              <thead>
-                <tr>
-                  <th>Closer</th>
-                  <th class="num">Booked</th>
-                  <th class="num">Completed</th>
-                  <th class="num">No Show %</th>
-                  <th class="num">Assessments</th>
-                  <th class="num">Closes</th>
-                  <th class="num">No Close</th>
-                  <th class="num">Follow Up</th>
-                  <th class="num">Closing Rate %</th>
-                  <th class="num">Revenue</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+        <div class="chart-row">
+          <div class="chart-card">
+            <h3>Closing call outcomes</h3>
+            <div class="chart-body"><canvas id="closer-outcomes"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Closes vs revenue — by closer</h3>
+            <div class="chart-body"><canvas id="closer-by-person"></canvas></div>
           </div>
         </div>
       </section>

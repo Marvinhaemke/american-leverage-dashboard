@@ -163,7 +163,7 @@ function renderSetter(records) {
   ]);
 
   renderSetterByPerson(records);
-  renderSetterTable(records);
+  renderSetterPeople(records);
 }
 
 function renderCloser(records) {
@@ -192,7 +192,7 @@ function renderCloser(records) {
   });
 
   renderCloserByPerson(records);
-  renderCloserTable(records);
+  renderCloserPeople(records);
 }
 
 // ---------- Per-person ----------
@@ -214,24 +214,19 @@ function renderSetterByPerson(records) {
   );
 }
 
-function renderSetterTable(records) {
-  const tbody = document.querySelector("#setter-table tbody");
+// One card per setter, rendered side by side in a grid of columns.
+function renderSetterPeople(records) {
   const rows = personRows(records, "Setter", setterKPIs, "bookedCalls");
-
-  tbody.innerHTML = rows.length ? rows.map(r => `
-    <tr>
-      <td>${escapeHtml(r.name)}</td>
-      <td class="num">${fmt.num(r.bookedCalls)}</td>
-      <td class="num">${fmt.num(r.completedCalls)}</td>
-      <td class="num">${fmt.pct(r.noShowRate)}</td>
-      <td class="num">${fmt.pct(r.qualifiedRate)}</td>
-      <td class="num">${fmt.num(r.closes)}</td>
-      <td class="num">${fmt.pct(r.closingRate)}</td>
-      <td class="num">${fmt.pct(r.closerDisqualRate)}</td>
-      <td class="num">${fmt.pct(r.closerNoShowRate)}</td>
-      <td class="num">${fmt.money(r.revenue)}</td>
-    </tr>
-  `).join("") : emptyRow(10);
+  $("setter-people").innerHTML = rows.length ? rows.map(r => personCard(r.name, fmt.money(r.revenue), "revenue", [
+    ["Booked",           fmt.num(r.bookedCalls)],
+    ["Completed",        fmt.num(r.completedCalls)],
+    ["No Show",          fmt.pct(r.noShowRate)],
+    ["Qualified",        fmt.pct(r.qualifiedRate)],
+    ["Closes",           fmt.num(r.closes)],
+    ["Closing Rate",     fmt.pct(r.closingRate)],
+    ["Closer Disq.",     fmt.pct(r.closerDisqualRate)],
+    ["Closer No-Show",   fmt.pct(r.closerNoShowRate)]
+  ])).join("") : peopleEmpty("setters");
 }
 
 function renderCloserByPerson(records) {
@@ -243,28 +238,40 @@ function renderCloserByPerson(records) {
   );
 }
 
-function renderCloserTable(records) {
-  const tbody = document.querySelector("#closer-table tbody");
+// One card per closer, rendered side by side in a grid of columns.
+function renderCloserPeople(records) {
   const rows = personRows(records, "Closer", closerKPIs, "closes");
-
-  tbody.innerHTML = rows.length ? rows.map(r => `
-    <tr>
-      <td>${escapeHtml(r.name)}</td>
-      <td class="num">${fmt.num(r.bookedCalls)}</td>
-      <td class="num">${fmt.num(r.completedCalls)}</td>
-      <td class="num">${fmt.pct(r.noShowRate)}</td>
-      <td class="num">${fmt.num(r.assessmentFilled)}</td>
-      <td class="num">${fmt.num(r.closes)}</td>
-      <td class="num">${fmt.num(r.noCloses)}</td>
-      <td class="num">${fmt.num(r.followUp)}</td>
-      <td class="num">${fmt.pct(r.closingRate)}</td>
-      <td class="num">${fmt.money(r.revenue)}</td>
-    </tr>
-  `).join("") : emptyRow(10);
+  $("closer-people").innerHTML = rows.length ? rows.map(r => personCard(r.name, fmt.money(r.revenue), "revenue", [
+    ["Booked",       fmt.num(r.bookedCalls)],
+    ["Completed",    fmt.num(r.completedCalls)],
+    ["No Show",      fmt.pct(r.noShowRate)],
+    ["Assessments",  fmt.num(r.assessmentFilled)],
+    ["Closes",       fmt.num(r.closes)],
+    ["No Close",     fmt.num(r.noCloses)],
+    ["In Follow Up", fmt.num(r.followUp)],
+    ["Closing Rate", fmt.pct(r.closingRate)]
+  ])).join("") : peopleEmpty("closers");
 }
 
-function emptyRow(colspan) {
-  return `<tr class="empty-row"><td colspan="${colspan}">No data in the selected range</td></tr>`;
+function personCard(name, highlightValue, highlightLabel, metrics) {
+  return `
+    <div class="person-card">
+      <div class="person-head">
+        <span class="person-avatar">${escapeHtml(name.trim().charAt(0).toUpperCase() || "?")}</span>
+        <span class="person-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+      </div>
+      <div class="person-highlight">
+        <span class="kpi-value">${highlightValue}</span>
+        <span class="kpi-sub">${highlightLabel}</span>
+      </div>
+      <ul class="person-metrics">
+        ${metrics.map(([label, value]) => `<li><span>${label}</span><b>${value}</b></li>`).join("")}
+      </ul>
+    </div>`;
+}
+
+function peopleEmpty(what) {
+  return `<div class="people-empty">No ${what} with data in the selected range</div>`;
 }
 
 // ---------- Charts ----------

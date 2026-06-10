@@ -7,8 +7,9 @@ deployable to Vercel.
 
 Header and filters ("general information") sit on top, followed by an overall
 overview strip (leads, calls booked, closes, closing rate, revenue). Below
-that, the **Setter** and **Closer** dashboards sit in two columns next to each
-other; they stack vertically on narrow screens.
+that come the **Setter Dashboard** and the **Closer Dashboard** sections; in
+each one the **individual setters / closers are shown as cards in columns next
+to each other**, followed by team totals and charts.
 
 ## What's tracked
 
