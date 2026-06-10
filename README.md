@@ -3,6 +3,18 @@
 KPI dashboard for the Setter → Closer funnel, fed live from Airtable and
 deployable to Vercel.
 
+## Layout
+
+Header and filters ("general information") sit on top, followed by an overall
+overview strip (leads, calls booked, closes, closing rate, revenue — each
+metric filtered by its natural date field). Below that, the **Setter
+Dashboard** and **Closer Dashboard** live in separate tabs; in each one the
+**individual setters / closers are shown as cards in columns next to each
+other**, followed by team totals and charts.
+
+The date range is applied to **setting call dates** on the Setter tab and to
+**closing call dates** on the Closer tab.
+
 ## What's tracked
 
 ### Setter Dashboard
@@ -32,12 +44,21 @@ deployable to Vercel.
 - Outcome donut + per-closer table
 
 ## Filters
-- Timeframe basis: **Date Created**, **Setting Call**, **Closing Call**, or **Close Date**
 - Date range: last 7 / 30 / 90 days, YTD, all-time, or custom
 - Setter and Closer dropdowns
 
-Filtering happens client-side on a single fetched dataset, so changing filters
-is instant.
+The timeframe basis is fixed per tab (Setting Call date on the Setter tab,
+Closing Call date on the Closer tab). Filtering happens client-side on a
+single fetched dataset, so changing filters is instant.
+
+## Schema robustness
+
+The API only requests the fields the dashboard actually uses (see `FIELDS` in
+[api/leads.js](api/leads.js)). If a field is renamed or deleted in Airtable,
+the function drops it and retries instead of failing — the dashboard still
+loads and shows a warning in the status bar listing the missing fields, so
+KPIs that depend on them can be spotted immediately. Rate-limited (429) and
+5xx responses are retried with backoff.
 
 ## Funnel mapping notes
 

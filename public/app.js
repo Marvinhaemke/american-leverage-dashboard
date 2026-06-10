@@ -3,18 +3,33 @@
 // client-side so the dataset is fetched once and reused.
 
 import {
-  bucketOutcome, filterRecords, setterKPIs, closerKPIs,
-  groupBy, parseDate, fmt
+  filterRecords, setterKPIs, closerKPIs, groupBy, fmt
 } from "./kpis.js";
 
 const state = {
   records: [],
   fetchedAt: null,
+  missingFields: [],
   charts: {}
 };
 
 const $ = id => document.getElementById(id);
 const REFRESH_MS = 5 * 60 * 1000; // 5 minutes
+
+// Each dashboard applies the date range to its own date field.
+const SETTER_BASIS = "Date Setting Call";
+const CLOSER_BASIS = "Date Strategy Call"; // = closing call
+
+const COLORS = {
+  text: "#e9edf4",
+  muted: "#8d97ab",
+  grid: "#28303f",
+  accent: "#4f8cff",
+  accent2: "#9d7bff",
+  good: "#34c77b",
+  bad: "#ff5d6c",
+  warn: "#ffb84d"
+};
 
 // ---------- Loading ----------
 async function loadRecords() {
@@ -25,11 +40,17 @@ async function loadRecords() {
     if (!res.ok) throw new Error((await res.text()).slice(0, 200));
     const data = await res.json();
     state.records = data.records || [];
+    state.missingFields = data.missingFields || [];
     state.fetchedAt = new Date(data.fetchedAt || Date.now());
     populatePeopleFilters();
     render();
     const ts = state.fetchedAt.toLocaleString();
-    $("status-text").textContent = `${state.records.length} leads — updated ${ts}`;
+    let status = `${state.records.length} leads — updated ${ts}`;
+    if (state.missingFields.length) {
+      status += ` — ⚠ not found in Airtable: ${state.missingFields.join(", ")}`;
+    }
+    $("status-text").textContent = status;
+    $("status-text").classList.toggle("warn-text", state.missingFields.length > 0);
     $("footer-info").textContent =
       `Data source: Airtable Leads table. Auto-refreshes every 5 minutes.`;
   } catch (err) {
@@ -64,7 +85,6 @@ function escapeHtml(s) {
 }
 
 function readFilters() {
-  const basis = $("timeframe-basis").value;
   const preset = $("date-preset").value;
   let from = null, to = null;
 
@@ -84,15 +104,18 @@ function readFilters() {
     from.setDate(from.getDate() - days);
   }
 
+  // Normalise to whole days so boundary records aren't dropped by the
+  // time-of-day the page happened to load at.
+  if (from) { from = new Date(from); from.setHours(0, 0, 0, 0); }
+  if (to)   { to   = new Date(to);   to.setHours(23, 59, 59, 999); }
+
   // Reflect computed dates in the inputs so the user can see + tweak them.
   if (preset !== "custom") {
     $("date-from").value = from ? toInputDate(from) : "";
     $("date-to").value   = to   ? toInputDate(to)   : "";
   }
-  if (to) { to = new Date(to); to.setHours(23, 59, 59, 999); }
 
   return {
-    basis,
     from,
     to,
     setter: $("setter-filter").value || null,
@@ -110,10 +133,26 @@ function toInputDate(d) {
 // ---------- Render ----------
 function render() {
   const filters = readFilters();
-  const filtered = filterRecords(state.records, filters);
 
-  renderSetter(filtered);
-  renderCloser(filtered);
+  renderOverview(filters);
+  renderSetter(filterRecords(state.records, { ...filters, basis: SETTER_BASIS }));
+  renderCloser(filterRecords(state.records, { ...filters, basis: CLOSER_BASIS }));
+}
+
+// Each overview metric uses its natural date basis (see kpi-sub labels).
+function renderOverview(filters) {
+  const byCreated = filterRecords(state.records, { ...filters, basis: "Date Created" });
+  const bySetting = filterRecords(state.records, { ...filters, basis: SETTER_BASIS });
+  const byClosing = filterRecords(state.records, { ...filters, basis: CLOSER_BASIS });
+  const byClose   = filterRecords(state.records, { ...filters, basis: "Date Close" });
+
+  const c = closerKPIs(byClosing);
+  $("o-leads").textContent          = fmt.num(byCreated.length);
+  $("o-setting-booked").textContent = fmt.num(setterKPIs(bySetting).bookedCalls);
+  $("o-closing-booked").textContent = fmt.num(c.bookedCalls);
+  $("o-closes").textContent         = fmt.num(c.closes);
+  $("o-closing-rate").textContent   = fmt.pct(c.closingRate);
+  $("o-revenue").textContent        = fmt.money(closerKPIs(byClose).revenue);
 }
 
 function renderSetter(records) {
@@ -137,7 +176,7 @@ function renderSetter(records) {
   ]);
 
   renderSetterByPerson(records);
-  renderSetterTable(records);
+  renderSetterPeople(records);
 }
 
 function renderCloser(records) {
@@ -161,62 +200,50 @@ function renderCloser(records) {
   drawDonutChart("closer-outcomes", {
     "Close": k.closes,
     "No Close": k.noCloses,
-    "Follow Up": k.followUp,
+    "In Follow Up": k.followUp,
     "Disqualified": k.disqualified
   });
 
   renderCloserByPerson(records);
-  renderCloserTable(records);
+  renderCloserPeople(records);
 }
 
 // ---------- Per-person ----------
-function renderSetterByPerson(records) {
-  const groups = groupBy(records, "Setter");
-  const rows = [...groups.entries()].map(([name, recs]) => {
-    const k = setterKPIs(recs);
-    return { name, ...k };
-  }).sort((a, b) => b.bookedCalls - a.bookedCalls).slice(0, 15);
+function personRows(records, field, kpiFn, sortKey) {
+  const groups = groupBy(records, field);
+  return [...groups.entries()]
+    .map(([name, recs]) => ({ name, ...kpiFn(recs) }))
+    .sort((a, b) => b[sortKey] - a[sortKey]);
+}
 
+function renderSetterByPerson(records) {
+  const rows = personRows(records, "Setter", setterKPIs, "bookedCalls").slice(0, 15);
   drawBarChart("setter-by-person",
     rows.map(r => r.name),
     [
-      { label: "Booked",    data: rows.map(r => r.bookedCalls),   color: "#4f8cff" },
-      { label: "Completed", data: rows.map(r => r.completedCalls), color: "#7c5cff" }
+      { label: "Booked",    data: rows.map(r => r.bookedCalls),    color: COLORS.accent },
+      { label: "Completed", data: rows.map(r => r.completedCalls), color: COLORS.accent2 }
     ]
   );
 }
 
-function renderSetterTable(records) {
-  const tbody = document.querySelector("#setter-table tbody");
-  const groups = groupBy(records, "Setter");
-  const rows = [...groups.entries()].map(([name, recs]) => {
-    const k = setterKPIs(recs);
-    return { name, ...k };
-  }).sort((a, b) => b.bookedCalls - a.bookedCalls);
-
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td>${escapeHtml(r.name)}</td>
-      <td class="num">${fmt.num(r.bookedCalls)}</td>
-      <td class="num">${fmt.num(r.completedCalls)}</td>
-      <td class="num">${fmt.pct(r.noShowRate)}</td>
-      <td class="num">${fmt.pct(r.qualifiedRate)}</td>
-      <td class="num">${fmt.num(r.closes)}</td>
-      <td class="num">${fmt.pct(r.closingRate)}</td>
-      <td class="num">${fmt.pct(r.closerDisqualRate)}</td>
-      <td class="num">${fmt.pct(r.closerNoShowRate)}</td>
-      <td class="num">${fmt.money(r.revenue)}</td>
-    </tr>
-  `).join("");
+// One card per setter, rendered side by side in a grid of columns.
+function renderSetterPeople(records) {
+  const rows = personRows(records, "Setter", setterKPIs, "bookedCalls");
+  $("setter-people").innerHTML = rows.length ? rows.map(r => personCard(r.name, fmt.money(r.revenue), "revenue", [
+    ["Booked",           fmt.num(r.bookedCalls)],
+    ["Completed",        fmt.num(r.completedCalls)],
+    ["No Show",          fmt.pct(r.noShowRate)],
+    ["Qualified",        fmt.pct(r.qualifiedRate)],
+    ["Closes",           fmt.num(r.closes)],
+    ["Closing Rate",     fmt.pct(r.closingRate)],
+    ["Closer Disq.",     fmt.pct(r.closerDisqualRate)],
+    ["Closer No-Show",   fmt.pct(r.closerNoShowRate)]
+  ])).join("") : peopleEmpty("setters");
 }
 
 function renderCloserByPerson(records) {
-  const groups = groupBy(records, "Closer");
-  const rows = [...groups.entries()].map(([name, recs]) => {
-    const k = closerKPIs(recs);
-    return { name, ...k };
-  }).sort((a, b) => b.closes - a.closes).slice(0, 15);
-
+  const rows = personRows(records, "Closer", closerKPIs, "closes").slice(0, 15);
   drawComboChart("closer-by-person",
     rows.map(r => r.name),
     rows.map(r => r.closes),
@@ -224,36 +251,58 @@ function renderCloserByPerson(records) {
   );
 }
 
-function renderCloserTable(records) {
-  const tbody = document.querySelector("#closer-table tbody");
-  const groups = groupBy(records, "Closer");
-  const rows = [...groups.entries()].map(([name, recs]) => {
-    const k = closerKPIs(recs);
-    return { name, ...k };
-  }).sort((a, b) => b.closes - a.closes);
+// One card per closer, rendered side by side in a grid of columns.
+function renderCloserPeople(records) {
+  const rows = personRows(records, "Closer", closerKPIs, "closes");
+  $("closer-people").innerHTML = rows.length ? rows.map(r => personCard(r.name, fmt.money(r.revenue), "revenue", [
+    ["Booked",       fmt.num(r.bookedCalls)],
+    ["Completed",    fmt.num(r.completedCalls)],
+    ["No Show",      fmt.pct(r.noShowRate)],
+    ["Assessments",  fmt.num(r.assessmentFilled)],
+    ["Closes",       fmt.num(r.closes)],
+    ["No Close",     fmt.num(r.noCloses)],
+    ["In Follow Up", fmt.num(r.followUp)],
+    ["Closing Rate", fmt.pct(r.closingRate)]
+  ])).join("") : peopleEmpty("closers");
+}
 
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td>${escapeHtml(r.name)}</td>
-      <td class="num">${fmt.num(r.bookedCalls)}</td>
-      <td class="num">${fmt.num(r.completedCalls)}</td>
-      <td class="num">${fmt.pct(r.noShowRate)}</td>
-      <td class="num">${fmt.num(r.assessmentFilled)}</td>
-      <td class="num">${fmt.num(r.closes)}</td>
-      <td class="num">${fmt.num(r.noCloses)}</td>
-      <td class="num">${fmt.num(r.followUp)}</td>
-      <td class="num">${fmt.pct(r.closingRate)}</td>
-      <td class="num">${fmt.money(r.revenue)}</td>
-    </tr>
-  `).join("");
+function personCard(name, highlightValue, highlightLabel, metrics) {
+  return `
+    <div class="person-card">
+      <div class="person-head">
+        <span class="person-avatar">${escapeHtml(name.trim().charAt(0).toUpperCase() || "?")}</span>
+        <span class="person-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+      </div>
+      <div class="person-highlight">
+        <span class="kpi-value">${highlightValue}</span>
+        <span class="kpi-sub">${highlightLabel}</span>
+      </div>
+      <ul class="person-metrics">
+        ${metrics.map(([label, value]) => `<li><span>${label}</span><b>${value}</b></li>`).join("")}
+      </ul>
+    </div>`;
+}
+
+function peopleEmpty(what) {
+  return `<div class="people-empty">No ${what} with data in the selected range</div>`;
 }
 
 // ---------- Charts ----------
+// If the Chart.js CDN failed to load, skip chart drawing instead of throwing —
+// KPIs and tables should still render.
+function chartsAvailable() {
+  return typeof Chart !== "undefined";
+}
+
 function destroyChart(id) {
   if (state.charts[id]) { state.charts[id].destroy(); delete state.charts[id]; }
 }
 
+// Charts live inside fixed-height .chart-body wrappers, so let them fill it.
+const BASE_OPTIONS = { responsive: true, maintainAspectRatio: false };
+
 function drawFunnelChart(canvasId, stages) {
+  if (!chartsAvailable()) return;
   destroyChart(canvasId);
   const ctx = $(canvasId).getContext("2d");
   state.charts[canvasId] = new Chart(ctx, {
@@ -262,22 +311,24 @@ function drawFunnelChart(canvasId, stages) {
       labels: stages.map(s => s.label),
       datasets: [{
         data: stages.map(s => s.value),
-        backgroundColor: ["#4f8cff", "#5d8cff", "#6c7fff", "#7c5cff", "#34c77b"],
+        backgroundColor: ["#4f8cff", "#5d8cff", "#6c7fff", "#9d7bff", "#34c77b"],
         borderRadius: 6
       }]
     },
     options: {
+      ...BASE_OPTIONS,
       indexAxis: "y",
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: "#8b94a7" }, grid: { color: "#262d3a" } },
-        y: { ticks: { color: "#e7ebf2" }, grid: { display: false } }
+        x: { ticks: { color: COLORS.muted, precision: 0 }, grid: { color: COLORS.grid } },
+        y: { ticks: { color: COLORS.text }, grid: { display: false } }
       }
     }
   });
 }
 
 function drawDonutChart(canvasId, dataObj) {
+  if (!chartsAvailable()) return;
   destroyChart(canvasId);
   const ctx = $(canvasId).getContext("2d");
   state.charts[canvasId] = new Chart(ctx, {
@@ -286,19 +337,22 @@ function drawDonutChart(canvasId, dataObj) {
       labels: Object.keys(dataObj),
       datasets: [{
         data: Object.values(dataObj),
-        backgroundColor: ["#34c77b", "#ff5d6c", "#ffb84d", "#8b94a7"],
+        backgroundColor: [COLORS.good, COLORS.bad, COLORS.warn, COLORS.muted],
         borderWidth: 0
       }]
     },
     options: {
+      ...BASE_OPTIONS,
+      cutout: "62%",
       plugins: {
-        legend: { labels: { color: "#e7ebf2" }, position: "bottom" }
+        legend: { labels: { color: COLORS.text }, position: "bottom" }
       }
     }
   });
 }
 
 function drawBarChart(canvasId, labels, datasets) {
+  if (!chartsAvailable()) return;
   destroyChart(canvasId);
   const ctx = $(canvasId).getContext("2d");
   state.charts[canvasId] = new Chart(ctx, {
@@ -313,32 +367,35 @@ function drawBarChart(canvasId, labels, datasets) {
       }))
     },
     options: {
-      plugins: { legend: { labels: { color: "#e7ebf2" } } },
+      ...BASE_OPTIONS,
+      plugins: { legend: { labels: { color: COLORS.text } } },
       scales: {
-        x: { ticks: { color: "#8b94a7" }, grid: { display: false } },
-        y: { ticks: { color: "#8b94a7" }, grid: { color: "#262d3a" } }
+        x: { ticks: { color: COLORS.muted }, grid: { display: false } },
+        y: { ticks: { color: COLORS.muted, precision: 0 }, grid: { color: COLORS.grid } }
       }
     }
   });
 }
 
 function drawComboChart(canvasId, labels, closes, revenue) {
+  if (!chartsAvailable()) return;
   destroyChart(canvasId);
   const ctx = $(canvasId).getContext("2d");
   state.charts[canvasId] = new Chart(ctx, {
     data: {
       labels,
       datasets: [
-        { type: "bar",  label: "Closes",  data: closes,  backgroundColor: "#4f8cff", borderRadius: 4, yAxisID: "y" },
-        { type: "line", label: "Revenue", data: revenue, borderColor: "#34c77b",     backgroundColor: "#34c77b", yAxisID: "y1", tension: 0.3 }
+        { type: "bar",  label: "Closes",  data: closes,  backgroundColor: COLORS.accent, borderRadius: 4, yAxisID: "y" },
+        { type: "line", label: "Revenue", data: revenue, borderColor: COLORS.good,       backgroundColor: COLORS.good, yAxisID: "y1", tension: 0.3 }
       ]
     },
     options: {
-      plugins: { legend: { labels: { color: "#e7ebf2" } } },
+      ...BASE_OPTIONS,
+      plugins: { legend: { labels: { color: COLORS.text } } },
       scales: {
-        x:  { ticks: { color: "#8b94a7" }, grid: { display: false } },
-        y:  { ticks: { color: "#8b94a7" }, grid: { color: "#262d3a" }, position: "left" },
-        y1: { ticks: { color: "#8b94a7", callback: v => "$" + v.toLocaleString() }, grid: { display: false }, position: "right" }
+        x:  { ticks: { color: COLORS.muted }, grid: { display: false } },
+        y:  { ticks: { color: COLORS.muted, precision: 0 }, grid: { color: COLORS.grid }, position: "left" },
+        y1: { ticks: { color: COLORS.muted, callback: v => "$" + v.toLocaleString() }, grid: { display: false }, position: "right" }
       }
     }
   });
@@ -348,7 +405,7 @@ function drawComboChart(canvasId, labels, closes, revenue) {
 function bindEvents() {
   $("refresh-btn").addEventListener("click", loadRecords);
 
-  for (const id of ["timeframe-basis", "date-preset", "setter-filter", "closer-filter"]) {
+  for (const id of ["date-preset", "setter-filter", "closer-filter"]) {
     $(id).addEventListener("change", render);
   }
   for (const id of ["date-from", "date-to"]) {
@@ -360,10 +417,16 @@ function bindEvents() {
 
   document.querySelectorAll(".tab").forEach(btn => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab").forEach(b => {
+        b.classList.remove("active");
+        b.setAttribute("aria-selected", "false");
+      });
       document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
       btn.classList.add("active");
+      btn.setAttribute("aria-selected", "true");
       $("tab-" + btn.dataset.tab).classList.add("active");
+      // Re-render so charts are drawn into the now-visible (non-zero-size) panel.
+      render();
     });
   });
 }
