@@ -7,13 +7,28 @@ deployable to Vercel.
 
 Header and filters ("general information") sit on top, followed by an overall
 overview strip (leads, calls booked, closes, closing rate, revenue — each
-metric filtered by its natural date field). Below that, the **Setter
-Dashboard** and **Closer Dashboard** live in separate tabs; in each one the
-**individual setters / closers are shown as cards in columns next to each
-other**, followed by team totals and charts.
+metric filtered by its natural date field). Below that, three tabs:
 
-The date range is applied to **setting call dates** on the Setter tab and to
-**closing call dates** on the Closer tab.
+- **Setter Dashboard** / **Closer Dashboard** — individual setters / closers
+  shown as cards in columns next to each other, followed by team totals and
+  charts. The date range applies to setting call dates on the Setter tab and
+  closing call dates on the Closer tab.
+- **Marketing Dashboard** — combines Meta Ads spend with the Airtable funnel:
+  1. North star: Spend, Cash Collected, ROAS (cash basis), Blended CAC,
+     Core-Offer CAC (high-ticket closes only)
+  2. Funnel with transition rates (Leads → Qualified → Booked → Held →
+     Closes), Show Rate prominent, plus sales-side Qualified-after-Call
+  3. Cost per stage: CPL, cost per qualified lead / booked call / held call,
+     CAC
+  4. Country table sorted by cash collected (spend, CPQL, closes, cash, CAC)
+  5. Top performers: best ad and best campaign, each by volume (most leads)
+     and by efficiency (lowest CAC, falling back to CPL)
+  6. Data quality: last sync per source, outcome completeness, attribution
+     field mapping
+
+  Each marketing stage is counted by its own event date within the range.
+  The Core-Offer threshold is `CORE_OFFER_MIN_CASH` in
+  [public/marketing.js](public/marketing.js).
 
 ## What's tracked
 
@@ -106,6 +121,17 @@ vercel --prod
 | `AIRTABLE_TOKEN` | Airtable Personal Access Token with `data.records:read` on the base |
 | `AIRTABLE_BASE`  | `app7dTq3SSToVhnwl` (optional — already defaulted) |
 | `AIRTABLE_TABLE` | `tbloGJE9Oz52hrMTl` (optional — already defaulted) |
+| `META_ACCESS_TOKEN` | Meta Marketing API token with `ads_read` on the ad account (Marketing tab) |
+| `META_AD_ACCOUNT_ID` | Meta ad account id, with or without the `act_` prefix (Marketing tab) |
+
+Without the Meta variables the Marketing tab still loads (funnel, cash, data
+quality) and shows a "Meta not connected" notice for the spend-based KPIs.
+
+The marketing attribution fields (country / ad / campaign) are
+**auto-discovered** from the Airtable schema by sampling records and matching
+common names (`Country`/`Land`, `Ad Name`/`utm_content`, `Campaign`/
+`utm_campaign`, …). The resolved mapping is shown in the Marketing tab's
+data-quality row.
 
 The token lives **only on the server** (Vercel function); the browser never
 sees it.

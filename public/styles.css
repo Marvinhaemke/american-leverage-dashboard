@@ -174,6 +174,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   border-color: var(--accent-2);
   color: var(--text);
 }
+.tab[data-tab="marketing"].active {
+  background: rgba(52, 199, 123, 0.12);
+  border-color: var(--good);
+  color: var(--text);
+}
 
 /* ---------- Setter / Closer tab panels ---------- */
 .tab-panel {
@@ -203,10 +208,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   border-radius: 50%;
   flex: none;
 }
-.dot-setter { background: var(--accent);   box-shadow: 0 0 10px var(--accent); }
-.dot-closer { background: var(--accent-2); box-shadow: 0 0 10px var(--accent-2); }
-.section-setter .kpi { border-left: 2px solid rgba(79, 140, 255, 0.45); }
-.section-closer .kpi { border-left: 2px solid rgba(157, 123, 255, 0.45); }
+.dot-setter    { background: var(--accent);   box-shadow: 0 0 10px var(--accent); }
+.dot-closer    { background: var(--accent-2); box-shadow: 0 0 10px var(--accent-2); }
+.dot-marketing { background: var(--good);     box-shadow: 0 0 10px var(--good); }
+.section-setter .kpi    { border-left: 2px solid rgba(79, 140, 255, 0.45); }
+.section-closer .kpi    { border-left: 2px solid rgba(157, 123, 255, 0.45); }
+.section-marketing .kpi { border-left: 2px solid rgba(52, 199, 123, 0.45); }
 
 /* ---------- Individual people: side-by-side columns ---------- */
 .people-grid {
@@ -365,6 +372,129 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   height: 260px; /* fixed height so charts in both columns line up */
 }
 
+/* ---------- Marketing: notice banner ---------- */
+.notice {
+  background: rgba(255, 184, 77, 0.08);
+  border: 1px solid rgba(255, 184, 77, 0.45);
+  color: var(--warn);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 13px;
+}
+.notice b { color: var(--text); font-weight: 600; }
+
+/* ---------- Marketing: funnel ---------- */
+.funnel-row {
+  display: grid;
+  grid-template-columns: 1fr 170px 170px;
+  gap: 12px;
+  align-items: stretch;
+}
+.funnel-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+}
+.funnel-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+.funnel-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+  min-width: 90px;
+}
+.funnel-rate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.funnel-rate b { color: var(--good); font-size: 13px; }
+.kpi-prominent {
+  background: linear-gradient(180deg, rgba(52, 199, 123, 0.10), var(--panel));
+}
+.kpi-prominent .kpi-value { color: var(--good); }
+.kpi-value-sm { font-size: 14px; line-height: 1.4; word-break: break-word; }
+
+/* ---------- Marketing: top performers ---------- */
+.performer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+.performer-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 2px solid rgba(52, 199, 123, 0.45);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.performer-tag {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--good);
+  font-weight: 700;
+}
+.performer-name {
+  display: block;
+  font-weight: 700;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Tables ---------- */
+.table-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+.table-wrap { overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th, td {
+  text-align: left;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+th {
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  background: var(--panel-2);
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--panel-2); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.empty-row td { text-align: center; color: var(--muted); padding: 18px 12px; }
+
 /* ---------- Footer ---------- */
 .footer {
   padding: 14px 28px;
@@ -382,4 +512,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .filter { flex: 1 1 45%; }
   .people-grid { grid-template-columns: 1fr 1fr; }
   .chart-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .funnel-row { grid-template-columns: 1fr; }
 }
