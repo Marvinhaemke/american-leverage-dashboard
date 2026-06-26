@@ -18,9 +18,9 @@ metric filtered by its natural date field). Below that, three tabs:
      Core-Offer CAC (high-ticket closes only)
   2. Funnel with transition rates. Meta only sees as far as the booked call,
      so the funnel is supplemented from Airtable to show both calls:
-     Leads → Qualified → Setting Booked → Setting Held → Closing Booked →
-     Closing Held → Closes (each stage colour-coded by source). Show Rate
-     prominent, plus sales-side Qualified-after-Call
+     Leads → Qualified → Setting Booked → Closing Booked → Closes (each stage
+     colour-coded by source). Show Rate prominent, plus sales-side
+     Qualified-after-Call
   3. Cost per stage: CPL, cost per qualified lead / booked call / held call,
      CAC
   4. Country table sorted by cash collected (spend, CPQL, closes, cash, CAC)
@@ -58,7 +58,8 @@ metric filtered by its natural date field). Below that, three tabs:
 - Closing Rate
 - Close Rate after Follow Up
 - Disqualified from Closer
-- Revenue (Amount received)
+- Revenue (Amount received, attributed by **Close Date** — not the closing
+  call date used for the call-based KPIs)
 - Outcome donut + per-closer table
 
 ## Filters

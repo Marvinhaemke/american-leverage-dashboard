@@ -221,9 +221,7 @@ function renderFunnel(k) {
     { label: "Leads", value: k.leads, src: "meta" },
     { label: "Qualified Leads", value: k.qualified, src: "airtable" },
     { label: "Setting Booked", value: k.booked, src: "airtable" },
-    { label: "Setting Held", value: k.held, src: "airtable" },
     { label: "Closing Booked", value: k.closingBooked, src: "airtable" },
-    { label: "Closing Held", value: k.closingHeld, src: "airtable" },
     { label: "Closes", value: k.closes, src: "airtable" }
   ];
   const html = stages.map((s, i) => {

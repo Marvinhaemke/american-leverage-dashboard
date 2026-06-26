@@ -165,7 +165,12 @@ function render() {
 
   renderOverview(filters);
   renderSetter(filterRecords(state.records, { ...filters, basis: SETTER_BASIS }));
-  renderCloser(filterRecords(state.records, { ...filters, basis: CLOSER_BASIS }));
+  // Closer call-based KPIs use the closing-call date; revenue (Amount
+  // received) is attributed by Close Date instead.
+  renderCloser(
+    filterRecords(state.records, { ...filters, basis: CLOSER_BASIS }),
+    filterRecords(state.records, { ...filters, basis: "Date Close" })
+  );
   renderMarketing(state.records, state.meta, filters, {
     airtableFetchedAt: state.fetchedAt,
     fieldMap: state.fieldMap
@@ -213,8 +218,13 @@ function renderSetter(records) {
   renderSetterPeople(records);
 }
 
-function renderCloser(records) {
+function renderCloser(records, revenueRecords) {
   const k = closerKPIs(records);
+  // Revenue is summed over records whose Close Date falls in the range,
+  // independent of when the closing call happened.
+  const revByCloser = revenueByPerson(revenueRecords, "Closer");
+  const totalRevenue = [...revByCloser.values()].reduce((a, b) => a + b, 0);
+
   $("c-booked").textContent             = fmt.num(k.bookedCalls);
   $("c-completed").textContent          = fmt.num(k.completedCalls);
   $("c-noshow").textContent             = fmt.pct(k.noShowRate);
@@ -229,7 +239,7 @@ function renderCloser(records) {
   $("c-noclose-after-fu").textContent   = fmt.num(k.noCloseAfterFU);
   $("c-closing-rate").textContent       = fmt.pct(k.closingRate);
   $("c-close-rate-fu").textContent      = fmt.pct(k.closeRateAfterFU);
-  $("c-revenue").textContent            = fmt.money(k.revenue);
+  $("c-revenue").textContent            = fmt.money(totalRevenue);
 
   drawDonutChart("closer-outcomes", {
     "Close": k.closes,
@@ -238,8 +248,19 @@ function renderCloser(records) {
     "Disqualified": k.disqualified
   });
 
-  renderCloserByPerson(records);
-  renderCloserPeople(records);
+  renderCloserByPerson(records, revByCloser);
+  renderCloserPeople(records, revByCloser);
+}
+
+// Sum of "Amount received" per person over the given records.
+function revenueByPerson(records, field) {
+  const m = new Map();
+  for (const r of records) {
+    const who = r[field];
+    const v = r["Amount received"];
+    if (who && typeof v === "number") m.set(who, (m.get(who) || 0) + v);
+  }
+  return m;
 }
 
 // ---------- Per-person ----------
@@ -276,19 +297,19 @@ function renderSetterPeople(records) {
   ])).join("") : peopleEmpty("setters");
 }
 
-function renderCloserByPerson(records) {
+function renderCloserByPerson(records, revByCloser) {
   const rows = personRows(records, "Closer", closerKPIs, "closes").slice(0, 15);
   drawComboChart("closer-by-person",
     rows.map(r => r.name),
     rows.map(r => r.closes),
-    rows.map(r => r.revenue)
+    rows.map(r => revByCloser.get(r.name) || 0)
   );
 }
 
 // One card per closer, rendered side by side in a grid of columns.
-function renderCloserPeople(records) {
+function renderCloserPeople(records, revByCloser) {
   const rows = personRows(records, "Closer", closerKPIs, "closes");
-  $("closer-people").innerHTML = rows.length ? rows.map(r => personCard(r.name, fmt.money(r.revenue), "revenue", [
+  $("closer-people").innerHTML = rows.length ? rows.map(r => personCard(r.name, fmt.money(revByCloser.get(r.name) || 0), "revenue", [
     ["Booked",       fmt.num(r.bookedCalls)],
     ["Completed",    fmt.num(r.completedCalls)],
     ["No Show",      fmt.pct(r.noShowRate)],
