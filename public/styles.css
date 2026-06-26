@@ -413,8 +413,31 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   align-items: center;
   text-align: center;
   gap: 2px;
-  min-width: 90px;
+  min-width: 78px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border-top: 2px solid transparent;
 }
+.funnel-stage--meta     { border-top-color: var(--accent);   background: rgba(79, 140, 255, 0.06); }
+.funnel-stage--airtable { border-top-color: var(--good);     background: rgba(52, 199, 123, 0.06); }
+
+/* source legend on the funnel heading */
+.src-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.src-key {
+  width: 9px; height: 9px; border-radius: 2px; display: inline-block;
+}
+.src-key--meta     { background: var(--accent); margin-left: 4px; }
+.src-key--airtable { background: var(--good);   margin-left: 8px; }
 .funnel-rate {
   display: flex;
   flex-direction: column;

@@ -119,23 +119,29 @@ export function marketingKPIs(allRecords, filters) {
   const coreCloses  = closes.filter(r => (r["Amount received"] || 0) >= CORE_OFFER_MIN_CASH);
   const cash        = sumAmount(closeR);
 
-  // Outcome completeness: completed closing calls that have an outcome set.
-  const closingR        = filterRecords(allRecords, { ...filters, basis: "Date Strategy Call" });
-  const closingComplete = closingR
-    .filter(r => hasOccurred(r["Date Strategy Call"]) && r["Strategy No-Show"] !== true);
-  const withOutcome     = closingComplete.filter(r => bucketOutcome(r) !== null);
+  // Closing-call stage — Meta only knows the booked setting call, so the
+  // closing call (the second call) is supplemented entirely from Airtable.
+  const closingBookedR  = filterRecords(allRecords, { ...filters, basis: "Date Strategy Call" })
+    .filter(r => r["Date Strategy Call"]);
+  const closingDueR     = closingBookedR.filter(r => hasOccurred(r["Date Strategy Call"]));
+  const closingHeldR    = closingDueR.filter(r => r["Strategy No-Show"] !== true);
+  // Outcome completeness: held closing calls that have an outcome set.
+  const withOutcome     = closingHeldR.filter(r => bucketOutcome(r) !== null);
 
   return {
     leads: leadsR.length,
     qualified: leadsR.filter(isMarketingQualified).length,
     booked: bookedR.length,
     held: heldR.length,
+    closingBooked: closingBookedR.length,
+    closingHeld: closingHeldR.length,
     salesQualified: heldR.filter(isSalesQualified).length,
     closes: closes.length,
     coreCloses: coreCloses.length,
     cash,
     showRate: pct(heldR.length, dueR.length),
-    outcomeCompleteness: pct(withOutcome.length, closingComplete.length),
+    closingShowRate: pct(closingHeldR.length, closingDueR.length),
+    outcomeCompleteness: pct(withOutcome.length, closingHeldR.length),
     // per-group source sets, reused by the country table
     _leadsR: leadsR,
     _closeRClosed: closes,
@@ -190,19 +196,39 @@ export function renderMarketing(allRecords, meta, filters, syncInfo) {
   $("m-attribution").textContent = Object.keys(map).length
     ? Object.entries(map).map(([c, a]) => `${c}: ${a || "not found"}`).join(" · ")
     : "—";
+  $("m-fx").textContent = fxLabel(meta, configured);
+  $("m-fx").classList.toggle("warn-text", !!(meta?.fx?.fallback || meta?.fx?.unsupported));
+}
+
+// Human-readable description of how spend was converted to USD.
+function fxLabel(meta, configured) {
+  if (!configured) return "—";
+  const fx = meta.fx;
+  if (!fx || !fx.converted) {
+    if (fx?.unsupported) return `${fx.original}: no USD rate — spend shown as-is`;
+    return `${fx?.original || "USD"} — no conversion needed`;
+  }
+  const rate = fx.rate ? fx.rate.toFixed(4) : "?";
+  const date = fx.date ? ` · ${fx.date}` : "";
+  const src = fx.fallback ? `${fx.source} ⚠` : (fx.source || "");
+  return `${fx.original}→USD @ ${rate} (${src}${date})`;
 }
 
 function renderFunnel(k) {
+  // Meta's view stops at the booked call; the setting/closing call split and
+  // everything past it is supplemented from Airtable.
   const stages = [
-    { label: "Leads", value: k.leads },
-    { label: "Qualified Leads", value: k.qualified },
-    { label: "Booked Calls", value: k.booked },
-    { label: "Held Calls", value: k.held },
-    { label: "Closes", value: k.closes }
+    { label: "Leads", value: k.leads, src: "meta" },
+    { label: "Qualified Leads", value: k.qualified, src: "airtable" },
+    { label: "Setting Booked", value: k.booked, src: "airtable" },
+    { label: "Setting Held", value: k.held, src: "airtable" },
+    { label: "Closing Booked", value: k.closingBooked, src: "airtable" },
+    { label: "Closing Held", value: k.closingHeld, src: "airtable" },
+    { label: "Closes", value: k.closes, src: "airtable" }
   ];
   const html = stages.map((s, i) => {
     const stage = `
-      <div class="funnel-stage">
+      <div class="funnel-stage funnel-stage--${s.src}">
         <span class="kpi-value">${fmt.num(s.value)}</span>
         <span class="kpi-label">${s.label}</span>
       </div>`;
