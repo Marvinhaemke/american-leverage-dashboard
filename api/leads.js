@@ -6,9 +6,11 @@
 //   AIRTABLE_BASE   - Airtable base id (e.g. app7dTq3SSToVhnwl)
 //   AIRTABLE_TABLE  - Airtable table id  (e.g. tbloGJE9Oz52hrMTl)
 
-// Only the fields the dashboard actually computes KPIs from.
-const FIELDS = [
+// Fields the sales dashboards compute KPIs from, plus the marketing-side
+// qualification field.
+const STATIC_FIELDS = [
   "Date Created",
+  "Qualified Status",
   "Qualified After Call",
   "Date Setting Call",
   "Setting No-Show",
@@ -23,6 +25,26 @@ const FIELDS = [
   "Setter",
   "Closer"
 ];
+
+// Marketing attribution fields whose exact Airtable names may vary. They are
+// resolved against the real schema by sampling records (Airtable returns the
+// field names present on each record), first by candidate name, then by
+// pattern. Matched fields are copied onto the canonical key in every record
+// and the mapping is reported to the client for the data-quality row.
+const ATTRIBUTION_RESOLVERS = {
+  "Country": {
+    candidates: ["Country", "Land", "Country Code"],
+    pattern: /country|^land$/i
+  },
+  "Ad Name": {
+    candidates: ["Ad Name", "Ad", "Meta Ad", "Ad name", "utm_content", "UTM Content"],
+    pattern: /ad.?name|utm.?content/i
+  },
+  "Campaign Name": {
+    candidates: ["Campaign Name", "Campaign", "Campaign name", "utm_campaign", "UTM Campaign"],
+    pattern: /campaign/i
+  }
+};
 
 const MAX_PAGE_ATTEMPTS = 3;
 
@@ -52,6 +74,30 @@ async function fetchPage(url, token) {
   }
 }
 
+// Sample one page without a field filter to learn which field names actually
+// exist (only fields with a value on at least one sampled record show up,
+// which is good enough for attribution fields that are filled by the ad
+// integration).
+async function discoverFieldMap(baseId, tableId, token) {
+  const url = new URL(`https://api.airtable.com/v0/${baseId}/${tableId}`);
+  url.searchParams.set("pageSize", "100");
+  const json = await fetchPage(url, token);
+  const present = new Set();
+  for (const r of json.records) for (const k of Object.keys(r.fields)) present.add(k);
+
+  const map = {};
+  for (const [canonical, { candidates, pattern }] of Object.entries(ATTRIBUTION_RESOLVERS)) {
+    let hit = null;
+    for (const c of candidates) {
+      hit = [...present].find(f => f.toLowerCase() === c.toLowerCase());
+      if (hit) break;
+    }
+    if (!hit) hit = [...present].find(f => pattern.test(f));
+    map[canonical] = hit || null;
+  }
+  return map;
+}
+
 async function fetchAllWithFields(baseId, tableId, token, fields) {
   const all = [];
   let offset;
@@ -70,8 +116,8 @@ async function fetchAllWithFields(baseId, tableId, token, fields) {
 // If the Airtable schema changed and a requested field no longer exists,
 // drop that field and retry instead of failing the whole dashboard. Dropped
 // fields are reported to the client so it can show a warning.
-async function fetchAll(baseId, tableId, token) {
-  let fields = [...FIELDS];
+async function fetchAll(baseId, tableId, token, fields) {
+  fields = [...fields];
   const missingFields = [];
   while (true) {
     try {
@@ -100,10 +146,29 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { records, missingFields } = await fetchAll(baseId, tableId, token);
+    const fieldMap = await discoverFieldMap(baseId, tableId, token);
+    const attributionFields = Object.values(fieldMap).filter(Boolean);
+    const fields = [...new Set([...STATIC_FIELDS, ...attributionFields])];
+
+    const { records, missingFields } = await fetchAll(baseId, tableId, token, fields);
+
+    // Normalise discovered attribution fields onto their canonical keys so
+    // the front end never has to care about the actual Airtable names.
+    for (const [canonical, actual] of Object.entries(fieldMap)) {
+      if (!actual || actual === canonical) continue;
+      for (const r of records) {
+        if (r[actual] !== undefined) r[canonical] = r[actual];
+      }
+    }
+
     // Only successful responses are cacheable; errors must never be cached.
     res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=300");
-    res.status(200).json({ records, missingFields, fetchedAt: new Date().toISOString() });
+    res.status(200).json({
+      records,
+      missingFields,
+      fieldMap,
+      fetchedAt: new Date().toISOString()
+    });
   } catch (err) {
     res.setHeader("Cache-Control", "no-store");
     res.status(502).json({ error: String(err.message || err) });

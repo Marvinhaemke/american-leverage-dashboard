@@ -58,7 +58,7 @@ function inRange(date, from, to) {
 // A call has "occurred" once its scheduled date is on or before today. Calls
 // dated in the future are still on the calendar but haven't happened yet, so
 // they count as Booked but NOT as Completed (and aren't no-shows yet either).
-function hasOccurred(dateStr) {
+export function hasOccurred(dateStr) {
   const d = parseDate(dateStr);
   if (!d) return false;
   const today = new Date();

@@ -5,11 +5,15 @@
 import {
   filterRecords, setterKPIs, closerKPIs, groupBy, fmt
 } from "./kpis.js";
+import { renderMarketing } from "./marketing.js";
 
 const state = {
   records: [],
   fetchedAt: null,
   missingFields: [],
+  fieldMap: {},
+  meta: null,     // /api/meta payload (or { error })
+  metaKey: null,  // date-range key the current meta payload belongs to
   charts: {}
 };
 
@@ -41,7 +45,9 @@ async function loadRecords() {
     const data = await res.json();
     state.records = data.records || [];
     state.missingFields = data.missingFields || [];
+    state.fieldMap = data.fieldMap || {};
     state.fetchedAt = new Date(data.fetchedAt || Date.now());
+    state.metaKey = null; // refresh Meta data alongside Airtable
     populatePeopleFilters();
     render();
     const ts = state.fetchedAt.toLocaleString();
@@ -130,6 +136,29 @@ function toInputDate(d) {
   return `${y}-${m}-${day}`;
 }
 
+// ---------- Meta Ads data ----------
+// Spend data is aggregated server-side for the selected date range, so it is
+// refetched when the range changes (people filters don't affect Meta).
+async function maybeLoadMeta(filters) {
+  const key = `${filters.from ? toInputDate(filters.from) : ""}|${filters.to ? toInputDate(filters.to) : ""}`;
+  if (state.metaKey === key) return;
+  state.metaKey = key;
+  try {
+    const params = new URLSearchParams();
+    if (filters.from && filters.to) {
+      params.set("from", toInputDate(filters.from));
+      params.set("to", toInputDate(filters.to));
+    }
+    const res = await fetch("/api/meta" + (params.size ? "?" + params : ""));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    state.meta = data;
+  } catch (err) {
+    state.meta = { configured: false, error: err.message };
+  }
+  if (state.metaKey === key) render(); // still the current range
+}
+
 // ---------- Render ----------
 function render() {
   const filters = readFilters();
@@ -137,6 +166,11 @@ function render() {
   renderOverview(filters);
   renderSetter(filterRecords(state.records, { ...filters, basis: SETTER_BASIS }));
   renderCloser(filterRecords(state.records, { ...filters, basis: CLOSER_BASIS }));
+  renderMarketing(state.records, state.meta, filters, {
+    airtableFetchedAt: state.fetchedAt,
+    fieldMap: state.fieldMap
+  });
+  maybeLoadMeta(filters);
 }
 
 // Each overview metric uses its natural date basis (see kpi-sub labels).

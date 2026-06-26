@@ -3,6 +3,9 @@
   "functions": {
     "api/leads.js": {
       "maxDuration": 30
+    },
+    "api/meta.js": {
+      "maxDuration": 30
     }
   }
 }
