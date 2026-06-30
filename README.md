@@ -21,7 +21,9 @@ metric filtered by its natural date field). Below that, three tabs:
      Leads → Qualified → Setting Booked → Closing Booked → Closes (each stage
      colour-coded by source). Show Rate prominent, plus sales-side
      Qualified-after-Call
-  3. Cost per stage: CPL, cost per qualified lead / booked call / held call,
+  3. Cost per stage: CPL, cost per qualified lead (marketing-side), cost per
+     qualified lead after call (sales-side), cost per booked call, cost per
+     held call, cost per closing call (past closing calls excl. no-shows),
      CAC
   4. Country table sorted by cash collected (spend, CPQL, closes, cash, CAC)
   5. Top performers: best ad and best campaign, each by volume (most leads)
