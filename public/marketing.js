@@ -135,6 +135,13 @@ export function marketingKPIs(allRecords, filters) {
     held: heldR.length,
     closingBooked: closingBookedR.length,
     closingHeld: closingHeldR.length,
+    // Leads qualified on the call (sales-side), counted by Date Created so it
+    // shares the same denominator basis as the marketing Cost per Qualified Lead.
+    qualifiedAfterCall: leadsR.filter(isSalesQualified).length,
+    // Closing calls that actually took place: in the past and not a no-show
+    // (by either the no-show flag or a No-Show outcome).
+    closingCalls: closingDueR.filter(r =>
+      r["Strategy No-Show"] !== true && bucketOutcome(r) !== "no_show").length,
     salesQualified: heldR.filter(isSalesQualified).length,
     closes: closes.length,
     coreCloses: coreCloses.length,
@@ -175,11 +182,13 @@ export function renderMarketing(allRecords, meta, filters, syncInfo) {
     `${fmt.num(k.salesQualified)} (${fmt.pct(pct(k.salesQualified, k.held))})`;
 
   // Row 3 — Cost per stage
-  $("m-cpl").textContent  = fmt.money(per(spend, k.leads));
-  $("m-cpql").textContent = fmt.money(per(spend, k.qualified));
-  $("m-cpbc").textContent = fmt.money(per(spend, k.booked));
-  $("m-cphc").textContent = fmt.money(per(spend, k.held));
-  $("m-cac2").textContent = fmt.money(per(spend, k.closes));
+  $("m-cpl").textContent       = fmt.money(per(spend, k.leads));
+  $("m-cpql").textContent      = fmt.money(per(spend, k.qualified));
+  $("m-cpql-call").textContent = fmt.money(per(spend, k.qualifiedAfterCall));
+  $("m-cpbc").textContent      = fmt.money(per(spend, k.booked));
+  $("m-cphc").textContent      = fmt.money(per(spend, k.held));
+  $("m-cpcc").textContent      = fmt.money(per(spend, k.closingCalls));
+  $("m-cac2").textContent      = fmt.money(per(spend, k.closes));
 
   // Rows 4 + 5
   renderCountryTable(k, meta);
